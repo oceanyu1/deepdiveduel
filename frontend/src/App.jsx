@@ -2,9 +2,9 @@ import { useState, useRef, useEffect } from 'react';
 import Header from './components/Header';
 import ControlBar from './components/ControlBar';
 import AgentCard from './components/AgentCard';
-import WinOverlay from './components/WinOverlay';
 import GraphVisualization from './components/GraphVisualization';
 import NodeModal from './components/NodeModal';
+import AnalyticsModal from './components/AnalyticsModal';
 
 export default function RabbitHoleArena() {
   const [start, setStart] = useState('');
@@ -12,6 +12,8 @@ export default function RabbitHoleArena() {
   const [isRunning, setIsRunning] = useState(false);
   const [winner, setWinner] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
+  const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
+  const [raceStartTime, setRaceStartTime] = useState(null);
   const intervalRef = useRef(null);
   const wsRef = useRef(null);
   
@@ -20,14 +22,16 @@ export default function RabbitHoleArena() {
     nodes: 0, 
     depth: 0, 
     model: 'openai/gpt-4o',
-    path: []
+    path: [],
+    finishTime: null,
   });
   const [dfsData, setDfsData] = useState({ 
     logs: [], 
     nodes: 0, 
     depth: 0, 
     model: 'openai/gpt-4o',
-    path: []
+    path: [],
+    finishTime: null,
   });
 
   const [bfsGraphData, setBfsGraphData] = useState({ nodes: [], links: [] });
@@ -94,9 +98,10 @@ export default function RabbitHoleArena() {
 
     setIsRunning(true);
     setWinner(null);
+    setRaceStartTime(Date.now());
     
-    setBfsData({ logs: [`Starting from: ${startTopic}...`], nodes: 0, depth: 0, model: bfsData.model, path: [startTopic] });
-    setDfsData({ logs: [`Starting from: ${startTopic}...`], nodes: 0, depth: 0, model: dfsData.model, path: [startTopic] });
+    setBfsData({ logs: [`Starting from: ${startTopic}...`], nodes: 0, depth: 0, model: bfsData.model, path: [startTopic], finishTime: null });
+    setDfsData({ logs: [`Starting from: ${startTopic}...`], nodes: 0, depth: 0, model: dfsData.model, path: [startTopic], finishTime: null });
     const startTimestamp = new Date().toLocaleString();
     setBfsGraphData({ 
       nodes: [{ 
@@ -180,13 +185,15 @@ export default function RabbitHoleArena() {
             setBfsData(prev => ({
               ...prev,
               logs: [...prev.logs, `✓ Found target!`, `🏆 Winner!`],
-              path: payload.final_path || prev.path
+              path: payload.final_path || prev.path,
+              finishTime: Date.now()
             }));
           } else {
             setDfsData(prev => ({
               ...prev,
               logs: [...prev.logs, `✓ Found target!`, `🏆 Winner!`],
-              path: payload.final_path || prev.path
+              path: payload.final_path || prev.path,
+              finishTime: Date.now()
             }));
           }
         } else {
@@ -295,50 +302,74 @@ export default function RabbitHoleArena() {
       <div className="max-w-7xl mx-auto my-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
         <GraphVisualization 
           graphData={bfsGraphData} 
-          title="BFS Search Graph" 
+          title="The Spider (BFS)"
+          description="Scanning siblings and adjacent links first."
           color="blue"
           onNodeClick={setSelectedNode}
+          model={bfsData.model}
+          onModelChange={updateBfsModel}
+          isRunning={isRunning}
         />
         <GraphVisualization 
           graphData={dfsGraphData} 
-          title="DFS Search Graph" 
+          title="The Deep Diver (DFS)" 
+          description="Following a single thread as deep as it goes."
           color="purple"
           onNodeClick={setSelectedNode}
+          model={dfsData.model}
+          onModelChange={updateDfsModel}
+          isRunning={isRunning}
         />
       </div>
 
       <main className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
         <AgentCard 
-          title="The Explorer (BFS)" 
+          title="BFS Terminal" 
           color="blue" 
           data={bfsData} 
-          description="Scanning siblings and adjacent links first."
-          onModelChange={updateBfsModel}
-          isRunning={isRunning}
         />
 
         <AgentCard 
-          title="The Deep Diver (DFS)" 
+          title="DFS Terminal" 
           color="purple" 
           data={dfsData} 
-          description="Following a single thread as deep as it goes."
-          onModelChange={updateDfsModel}
-          isRunning={isRunning}
         />
       </main>
 
       {winner && (
-        <WinOverlay 
-          winner={winner === 'BFS' ? 'The Explorer (BFS)' : 'The Deep Diver (DFS)'}
-          path={winner === 'BFS' ? bfsData.path : dfsData.path}
-          stats={{
-            clicks: winner === 'BFS' ? bfsData.depth : dfsData.depth,
-            nodes: winner === 'BFS' ? bfsData.nodes : dfsData.nodes,
-            model: getModelDisplayName(winner === 'BFS' ? bfsData.model : dfsData.model)
-          }}
-          onReset={resetArena}
-        />
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-full max-w-sm">
+          <div className="bg-slate-800 border border-slate-700 rounded-2xl shadow-lg text-left animate-in slide-in-from-bottom-10 duration-500">
+            <div className="p-3 border-b border-slate-700">
+              <h3 className="text-base font-bold text-white">
+                Goal Reached!
+              </h3>
+            </div>
+            <div className="p-4 flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm text-slate-300">Winner:</p>
+                <p className="font-bold text-yellow-400">
+                  {winner === 'BFS' ? 'The Explorer (BFS)' : 'The Deep Diver (DFS)'}
+                </p>
+              </div>
+              <button 
+                onClick={() => setIsAnalyticsOpen(true)}
+                className="bg-slate-700 hover:bg-slate-600 text-white font-bold text-sm py-2 px-3 rounded-lg transition-colors flex-shrink-0"
+              >
+                Show Analytics
+              </button>
+            </div>
+          </div>
+        </div>
       )}
+
+      <AnalyticsModal
+        isOpen={isAnalyticsOpen}
+        onClose={() => setIsAnalyticsOpen(false)}
+        bfsData={bfsData}
+        dfsData={dfsData}
+        winner={winner}
+        raceStartTime={raceStartTime}
+      />
 
       <NodeModal 
         node={selectedNode} 

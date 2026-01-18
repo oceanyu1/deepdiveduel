@@ -101,7 +101,7 @@ def search_node(state: AgentState):
     # 2. CHECK IF VISITED OR TOO DEEP
     # Safety: If we are too deep, don't waste time scraping. 
     # This lets the agent BACKTRACK to a shallower node in the queue!
-    MAX_DEPTH = 10 
+    MAX_DEPTH = 20 
     if len(path) > MAX_DEPTH:
         print(f"   ⚠️ Depth limit reached at {current_topic}. Backtracking...")
         return {

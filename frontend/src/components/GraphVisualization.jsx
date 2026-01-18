@@ -1,7 +1,16 @@
 import { useRef, useEffect, useState } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
 
-export default function GraphVisualization({ graphData, title, color, onNodeClick }) {
+export default function GraphVisualization({ 
+  graphData, 
+  title, 
+  description,
+  color, 
+  onNodeClick,
+  model,
+  onModelChange,
+  isRunning
+}) {
   const fgRef = useRef();
   const containerRef = useRef();
   const [dimensions, setDimensions] = useState({ width: 800, height: 400 });
@@ -51,15 +60,30 @@ export default function GraphVisualization({ graphData, title, color, onNodeClic
   };
 
   return (
-    <div className="w-full h-[400px] bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden">
-      <div className="p-3 border-b border-slate-700 flex justify-between items-center">
+    <div className="w-full h-[400px] bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden flex flex-col">
+      <div className="p-3 border-b border-slate-700 flex justify-between items-start">
         <div>
           <h2 className="text-lg font-bold text-white">{title}</h2>
           <p className="text-xs text-slate-400 mt-1">
-            {graphData.nodes.length} nodes explored
+            {description}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col items-end gap-2">
+          <select 
+            value={model}
+            onChange={(e) => onModelChange(e.target.value)}
+            disabled={isRunning}
+            className="bg-slate-700 text-xs text-white p-2 rounded-lg outline-none border border-slate-600 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <option value="openai/gpt-4o">GPT-4o</option>
+            <option value="mistralai/mistral-large">Mistral Large</option>
+            <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</option>
+            <option value="mistralai/mistral-7b-instruct">Mistral 7B Instruct</option>
+            <option value="nousresearch/hermes-2-pro-llama-3-8b">Pro Llama 3 8B</option>
+          </select>
+        </div>
+      </div>
+      <div className="p-2 bg-slate-900/50 border-b border-slate-700 flex justify-end items-center gap-2">
           <span className="text-xs text-slate-400 bg-slate-700 px-2 py-1 rounded">
             Drag • Scroll zoom • Pan
           </span>
@@ -75,9 +99,8 @@ export default function GraphVisualization({ graphData, title, color, onNodeClic
           >
             Fit All
           </button>
-        </div>
       </div>
-      <div ref={containerRef} className="w-full h-[calc(100%-70px)]">
+      <div ref={containerRef} className="w-full flex-grow">
         <ForceGraph2D
           ref={fgRef}
           graphData={graphData}
