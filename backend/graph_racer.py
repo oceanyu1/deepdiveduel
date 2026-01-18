@@ -92,7 +92,7 @@ def search_node(state: AgentState):
     if state["mode"] == "bfs":
         current_topic, path = queue.pop(0)  # FIFO (front)
     else:
-        current_topic, path = queue.pop(0)   # LIFO (back) for DFS
+        current_topic, path = queue.pop()   # LIFO (back) for DFS
     
     print(f"🕵️ Visiting: {current_topic} (Depth: {len(path)})")
 
@@ -171,7 +171,7 @@ def search_node(state: AgentState):
 
 Current page: {current_topic}
 Target: {state['target']}
-Available Wikipedia links: {json.dumps(links[:80])}
+Available Wikipedia links: {json.dumps(links[:40])}
 
 Strategy: Pick 5 links that create the shortest conceptual bridge to "{state['target']}". 
 
@@ -344,7 +344,7 @@ The links MUST be chosen from the available links list above. Choose the 5 most 
         updated_queue = queue + new_items
     else:
         # Add to FRONT (Stack behavior for DFS)
-        updated_queue = new_items + queue
+        updated_queue = queue + new_items
 
     duration_ms = (time.time() - start_time) * 1000
     return {
