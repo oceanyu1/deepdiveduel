@@ -15,13 +15,15 @@ from langgraph.graph import StateGraph, END
 load_dotenv()
 
 # 1. THE BRAIN (OpenRouter)
-llm = ChatOpenAI(
-    base_url="https://openrouter.ai/api/v1",
-    api_key=os.getenv("OPENROUTER_API_KEY"),
-    model="meta-llama/llama-3-70b-instruct", # Cheap & Fast
-    temperature=0.1,  # Very low temp for more consistent JSON and reasoning
-    max_tokens=200  # Keep responses concise
-)
+def get_llm(model_name: str):
+    """Create an LLM instance with the specified model."""
+    return ChatOpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=os.getenv("OPENROUTER_API_KEY"),
+        model=model_name,
+        temperature=0.1,  # Very low temp for more consistent JSON and reasoning
+        max_tokens=200  # Keep responses concise
+    )
 
 # 2. THE EYES (Scraper)
 def get_wikipedia_links(topic: str) -> List[str]:
@@ -191,6 +193,7 @@ CRITICAL: Your response must be ONLY this JSON structure with NO additional text
 The links MUST be chosen from the available links list above. Choose the 5 most relevant."""
     
     try:
+        llm = get_llm(state["model_name"])
         response = llm.invoke(prompt)
         content = response.content.strip()
         
@@ -340,7 +343,7 @@ The links MUST be chosen from the available links list above. Choose the 5 most 
 
     # --- RE-QUEUE STRATEGY ---
     if state["mode"] == "bfs":
-        # Add to BACK (Standard Queue)
+        # Add to BACK (Standard Queue) - explores siblings first
         updated_queue = queue + new_items
     else:
         # Add to FRONT (Stack behavior for DFS)
