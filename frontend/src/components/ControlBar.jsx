@@ -1,14 +1,25 @@
-export default function ControlBar({ start, target, setStart, setTarget, isRunning, onStart }) {
+import { Play, StopCircle } from 'lucide-react';
+
+export default function ControlBar({ 
+  start, 
+  target, 
+  setStart, 
+  setTarget, 
+  isRunning, 
+  onStart,
+  onStop
+}) {
   return (
-    <div className="max-w-5xl mx-auto mb-12 bg-slate-800 p-4 rounded-3xl border border-slate-700 shadow-2xl">
+    <div className="max-w-4xl mx-auto p-4 bg-slate-800 rounded-lg shadow-lg">
       <div className="flex flex-col md:flex-row gap-4 items-center">
         <div className="flex-1 w-full">
           <label className="text-[10px] uppercase font-bold text-slate-500 ml-2">
-            Starting Website
+            Starting Wikipedia URL
           </label>
           <input 
-            placeholder="e.g. Mustard (Wikipedia)" 
-            className="w-full bg-slate-900 mt-1 p-4 rounded-xl border border-slate-700 text-white outline-none focus:border-blue-500"
+            type="url"
+            placeholder="e.g. https://en.wikipedia.org/wiki/Mustard" 
+            className="w-full p-3 bg-slate-700 text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={start}
             onChange={(e) => setStart(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && onStart()}
@@ -18,24 +29,39 @@ export default function ControlBar({ start, target, setStart, setTarget, isRunni
         <div className="text-2xl text-slate-600 font-black">TO</div>
         <div className="flex-1 w-full">
           <label className="text-[10px] uppercase font-bold text-slate-500 ml-2">
-            Target Concept
+            Target Wikipedia URL
           </label>
           <input 
-            placeholder="e.g. Microwave Ovens" 
-            className="w-full bg-slate-900 mt-1 p-4 rounded-xl border border-slate-700 text-white outline-none focus:border-purple-500"
+            type="url"
+            placeholder="Target: https://en.wikipedia.org/wiki/Chocolate" 
+            className="w-full p-3 bg-slate-700 text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={target}
             onChange={(e) => setTarget(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && onStart()}
             disabled={isRunning}
           />
         </div>
-        <button 
-          onClick={onStart}
-          disabled={isRunning}
-          className="h-full px-10 py-5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-2xl font-black uppercase tracking-tighter transition-colors"
-        >
-          {isRunning ? 'RUNNING...' : 'GO!'}
-        </button>
+      </div>
+
+      <div className="flex justify-center mt-4">
+        {!isRunning ? (
+          <button 
+            onClick={onStart}
+            className="flex items-center justify-center px-8 py-3 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed"
+            disabled={!start || !target}
+          >
+            <Play className="mr-2" size={20} />
+            Start Race
+          </button>
+        ) : (
+          <button 
+            onClick={onStop}
+            className="flex items-center justify-center px-8 py-3 bg-red-600 text-white font-bold rounded-lg shadow-md hover:bg-red-700 transition-colors"
+          >
+            <StopCircle className="mr-2" size={20} />
+            Stop Race
+          </button>
+        )}
       </div>
     </div>
   );

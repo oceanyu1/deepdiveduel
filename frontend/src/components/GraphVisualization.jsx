@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
 
-export default function GraphVisualization({ graphData, title, color }) {
+export default function GraphVisualization({ graphData, title, color, onNodeClick }) {
   const fgRef = useRef();
   const containerRef = useRef();
   const [dimensions, setDimensions] = useState({ width: 800, height: 400 });
@@ -111,6 +111,17 @@ export default function GraphVisualization({ graphData, title, color }) {
             ctx.textBaseline = 'middle';
             ctx.fillStyle = 'white';
             ctx.fillText(label, node.x, node.y + 8);
+          }}
+          onNodeClick={(node) => {
+            if (onNodeClick) {
+              onNodeClick(node);
+            }
+          }}
+          nodePointerAreaPaint={(node, color, ctx) => {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, 6, 0, 2 * Math.PI, false);
+            ctx.fill();
           }}
           linkColor={() => linkColor}
           linkWidth={1.5}
