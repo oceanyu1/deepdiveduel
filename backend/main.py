@@ -79,12 +79,12 @@ async def websocket_endpoint(websocket: WebSocket):
         manager.disconnect(websocket)
 
 
-async def run_agent(start_topic: str, end_topic: str, mode: str):
+async def run_agent(start_topic: str, end_topic: str, mode: str, model_name: str):
     """Run a single agent (BFS or DFS) and broadcast updates."""
     initial_state = {
         "target": end_topic,
         "mode": mode,
-        "model_name": "meta-llama/llama-3-70b-instruct",
+        "model_name": model_name,
         "queue": [(start_topic, [start_topic])],
         "visited": [],
         "current_topic": start_topic,
@@ -94,7 +94,7 @@ async def run_agent(start_topic: str, end_topic: str, mode: str):
         "duration_ms": 0.0
     }
     
-    print(f"🚀 Starting {mode.upper()} race: {start_topic} -> {end_topic}")
+    print(f"🚀 Starting {mode.upper()} race with {model_name}: {start_topic} -> {end_topic}")
     
     try:
         async for event in graph_app.astream(initial_state):
@@ -114,7 +114,7 @@ async def run_agent(start_topic: str, end_topic: str, mode: str):
                     "path": path,
                     "wikipedia_url": wiki_url,
                     "duration_ms": data.get("duration_ms", 0),
-                    "agent_model": "meta-llama/llama-3-70b-instruct",
+                    "agent_model": model_name,
                     "agent_type": mode
                 }
                 await manager.broadcast(payload)
@@ -150,19 +150,23 @@ async def run_agent(start_topic: str, end_topic: str, mode: str):
 
 async def simulate_agent_race(websocket: WebSocket, query: str) -> None:
     """Parse query and run both BFS and DFS agents in parallel until one wins."""
-    # Expect query format: "start:Microwave,target:Chocolate"
+    # Expect query format: "start:Microwave,target:Chocolate,bfs_model:openai/gpt-4o,dfs_model:deepseek/deepseek-chat"
     # Or fallback to defaults
     try:
         parts = dict(item.split(":") for item in query.split(","))
         start = parts.get("start", "Microwave")
         target = parts.get("target", "Chocolate")
+        bfs_model = parts.get("bfs_model", "meta-llama/llama-3-70b-instruct")
+        dfs_model = parts.get("dfs_model", "meta-llama/llama-3-70b-instruct")
     except:
         start = "Microwave"
         target = "Chocolate"
+        bfs_model = "meta-llama/llama-3-70b-instruct"
+        dfs_model = "meta-llama/llama-3-70b-instruct"
     
     # Run both agents in parallel but cancel when one finishes
-    bfs_task = asyncio.create_task(run_agent(start, target, "bfs"))
-    dfs_task = asyncio.create_task(run_agent(start, target, "dfs"))
+    bfs_task = asyncio.create_task(run_agent(start, target, "bfs", bfs_model))
+    dfs_task = asyncio.create_task(run_agent(start, target, "dfs", dfs_model))
 
     # Associate tasks with the connection for cancellation
     manager.add_tasks(websocket, [bfs_task, dfs_task])

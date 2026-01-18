@@ -15,13 +15,15 @@ from langgraph.graph import StateGraph, END
 load_dotenv()
 
 # 1. THE BRAIN (OpenRouter)
-llm = ChatOpenAI(
-    base_url="https://openrouter.ai/api/v1",
-    api_key=os.getenv("OPENROUTER_API_KEY"),
-    model="meta-llama/llama-3-70b-instruct", # Cheap & Fast
-    temperature=0.1,  # Very low temp for more consistent JSON and reasoning
-    max_tokens=200  # Keep responses concise
-)
+def get_llm(model_name: str):
+    """Create an LLM instance with the specified model."""
+    return ChatOpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=os.getenv("OPENROUTER_API_KEY"),
+        model=model_name,
+        temperature=0.1,  # Very low temp for more consistent JSON and reasoning
+        max_tokens=200  # Keep responses concise
+    )
 
 # 2. THE EYES (Scraper)
 def get_wikipedia_links(topic: str) -> List[str]:
@@ -87,12 +89,10 @@ def search_node(state: AgentState):
         return {"status": "failed"} # Queue empty, gave up
 
     # --- CRITICAL: BFS vs DFS Logic happens here ---
-    # BFS = FIFO (Pop from front)
-    # DFS = LIFO (Pop from front... because we ADD to front later)
-    if state["mode"] == "bfs":
-        current_topic, path = queue.pop(0)  # FIFO (front)
-    else:
-        current_topic, path = queue.pop(0)   # LIFO (back) for DFS
+    # Both pop from front, but differ in how they ADD items back:
+    # BFS = FIFO (pop front, add to back) - explores siblings first
+    # DFS = LIFO (pop front, add reversed to front) - explores depth first
+    current_topic, path = queue.pop(0)
     
     print(f"🕵️ Visiting: {current_topic} (Depth: {len(path)})")
 
@@ -191,6 +191,7 @@ CRITICAL: Your response must be ONLY this JSON structure with NO additional text
 The links MUST be chosen from the available links list above. Choose the 5 most relevant."""
     
     try:
+        llm = get_llm(state["model_name"])
         response = llm.invoke(prompt)
         content = response.content.strip()
         
@@ -340,10 +341,11 @@ The links MUST be chosen from the available links list above. Choose the 5 most 
 
     # --- RE-QUEUE STRATEGY ---
     if state["mode"] == "bfs":
-        # Add to BACK (Standard Queue)
+        # Add to BACK (Standard Queue) - explores siblings first
         updated_queue = queue + new_items
     else:
-        # Add to FRONT (Stack behavior for DFS)
+        # Add to FRONT (Stack behavior for DFS) - explores best path deeply
+        # Best links go to front, so best is explored first and deepest
         updated_queue = new_items + queue
 
     duration_ms = (time.time() - start_time) * 1000

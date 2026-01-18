@@ -19,19 +19,30 @@ export default function RabbitHoleArena() {
     logs: [], 
     nodes: 0, 
     depth: 0, 
-    model: 'ChatGPT-4o',
+    model: 'openai/gpt-4o',
     path: []
   });
   const [dfsData, setDfsData] = useState({ 
     logs: [], 
     nodes: 0, 
     depth: 0, 
-    model: 'ChatGPT-4o',
+    model: 'openai/gpt-4o',
     path: []
   });
 
   const [bfsGraphData, setBfsGraphData] = useState({ nodes: [], links: [] });
   const [dfsGraphData, setDfsGraphData] = useState({ nodes: [], links: [] });
+
+  const getModelDisplayName = (modelId) => {
+    const modelNames = {
+      'openai/gpt-4o': 'GPT-4o',
+      'google/gemini-flash-1.5-8b': 'Gemini Flash 1.5 8B',
+      'deepseek/deepseek-chat': 'DeepSeek V3',
+      'x-ai/grok-beta': 'Grok Beta',
+      'meta-llama/llama-3-70b-instruct': 'Llama 3 70B'
+    };
+    return modelNames[modelId] || modelId;
+  };
 
   const extractTopicFromUrl = (url) => {
     // Extract topic from Wikipedia URL
@@ -107,7 +118,7 @@ export default function RabbitHoleArena() {
     });
 
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(`start:${startTopic},target:${targetTopic}`);
+      wsRef.current.send(`start:${startTopic},target:${targetTopic},bfs_model:${bfsData.model},dfs_model:${dfsData.model}`);
     } else {
       alert('WebSocket not connected! Make sure backend is running on localhost:8000');
       setIsRunning(false);
@@ -323,7 +334,7 @@ export default function RabbitHoleArena() {
           stats={{
             clicks: winner === 'BFS' ? bfsData.depth : dfsData.depth,
             nodes: winner === 'BFS' ? bfsData.nodes : dfsData.nodes,
-            model: winner === 'BFS' ? bfsData.model : dfsData.model
+            model: getModelDisplayName(winner === 'BFS' ? bfsData.model : dfsData.model)
           }}
           onReset={resetArena}
         />
