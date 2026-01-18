@@ -57,7 +57,7 @@ Deep Dive Duel is a competitive game where two AI agents race to find the shorte
 
 5.  **Create a `.env` file** in the `backend` directory and add your OpenAI API key:
     ```
-    OPENAI_API_KEY=your_openai_api_key
+    OPENROUTER_API_KEY=your_openai_api_key
     ```
 
 ### Frontend
