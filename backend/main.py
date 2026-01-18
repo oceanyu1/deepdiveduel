@@ -100,7 +100,7 @@ async def run_agent(start_topic: str, end_topic: str, mode: str):
                 break
 
 async def simulate_agent_race(query: str) -> None:
-    """Parse query and run both BFS and DFS agents in parallel."""
+    """Parse query and run both BFS and DFS agents in parallel until one wins."""
     # Expect query format: "start:Microwave,target:Chocolate"
     # Or fallback to defaults
     try:
@@ -111,11 +111,25 @@ async def simulate_agent_race(query: str) -> None:
         start = "Microwave"
         target = "Chocolate"
     
-    # Run both agents in parallel
-    await asyncio.gather(
-        run_agent(start, target, "bfs"),
-        run_agent(start, target, "dfs")
+    # Run both agents in parallel but cancel when one finishes
+    bfs_task = asyncio.create_task(run_agent(start, target, "bfs"))
+    dfs_task = asyncio.create_task(run_agent(start, target, "dfs"))
+    
+    # Wait for first one to complete
+    done, pending = await asyncio.wait(
+        [bfs_task, dfs_task],
+        return_when=asyncio.FIRST_COMPLETED
     )
+    
+    # Cancel the remaining tasks
+    for task in pending:
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+    
+    print(f"🏁 Race finished! Winner stopped both agents.")
 
 
 def start():
