@@ -1,8 +1,9 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Header from './components/Header';
 import ControlBar from './components/ControlBar';
 import AgentCard from './components/AgentCard';
 import WinOverlay from './components/WinOverlay';
+import GraphVisualization from './components/GraphVisualization';
 
 export default function RabbitHoleArena() {
   const [start, setStart] = useState('');
@@ -10,6 +11,7 @@ export default function RabbitHoleArena() {
   const [isRunning, setIsRunning] = useState(false);
   const [winner, setWinner] = useState(null);
   const intervalRef = useRef(null);
+  const wsRef = useRef(null);
   
   const [bfsData, setBfsData] = useState({ 
     logs: [], 
@@ -26,6 +28,9 @@ export default function RabbitHoleArena() {
     path: []
   });
 
+  const [bfsGraphData, setBfsGraphData] = useState({ nodes: [], links: [] });
+  const [dfsGraphData, setDfsGraphData] = useState({ nodes: [], links: [] });
+
   const startRabbitHole = () => {
     if (!start || !target) {
       alert('Please enter both a starting website and target concept!');
@@ -35,96 +40,23 @@ export default function RabbitHoleArena() {
     setIsRunning(true);
     setWinner(null);
     
-    setBfsData({ logs: [], nodes: 0, depth: 0, model: bfsData.model, path: [] });
-    setDfsData({ logs: [], nodes: 0, depth: 0, model: dfsData.model, path: [] });
-    
-    setBfsData(prev => ({ 
-      ...prev, 
-      logs: [
-        `Starting from: ${start}`,
-        'Analyzing all adjacent links...',
-        'Found 12 sibling pages',
-        'Visiting: Condiments',
-        'Visiting: Food Science',
-        'Visiting: Kitchen Tools'
-      ],
-      path: [start]
-    }));
-    
-    setDfsData(prev => ({ 
-      ...prev, 
-      logs: [
-        `Starting from: ${start}`,
-        'Following deepest link...',
-        'Diving into: History of Spices',
-        'Going deeper: Ancient Trade Routes',
-        'Deeper still: Medieval Commerce',
-        'Found link: Preservation Methods'
-      ],
-      path: [start]
-    }));
+    setBfsData({ logs: [`Starting from: ${start}...`], nodes: 0, depth: 0, model: bfsData.model, path: [start] });
+    setDfsData({ logs: [`Starting from: ${start}...`], nodes: 0, depth: 0, model: dfsData.model, path: [start] });
+    setBfsGraphData({ 
+      nodes: [{ id: start, isStart: true }], 
+      links: [] 
+    });
+    setDfsGraphData({ 
+      nodes: [{ id: start, isStart: true }], 
+      links: [] 
+    });
 
-    intervalRef.current = setInterval(() => {
-      setBfsData(prev => {
-        const newNodes = prev.nodes + Math.floor(Math.random() * 3) + 1;
-        const newDepth = Math.floor(newNodes / 3);
-        const newLogs = [...prev.logs];
-        
-        if (newNodes % 5 === 0) {
-          newLogs.push(`Scanned ${newNodes} pages...`);
-        }
-        
-        if (newNodes >= 30 && !winner) {
-          setWinner('BFS');
-          setIsRunning(false);
-          clearInterval(intervalRef.current);
-          return {
-            ...prev,
-            nodes: newNodes,
-            depth: newDepth,
-            logs: [...newLogs, `✓ Found connection to ${target}!`],
-            path: [start, 'Condiments', 'Food Preservation', 'Heat Treatment', 'Kitchen Appliances', target]
-          };
-        }
-        
-        return {
-          ...prev,
-          nodes: newNodes,
-          depth: newDepth,
-          logs: newLogs.slice(-8)
-        };
-      });
-      
-      setDfsData(prev => {
-        const newNodes = prev.nodes + Math.floor(Math.random() * 2) + 1;
-        const newDepth = Math.floor(newNodes / 2);
-        const newLogs = [...prev.logs];
-        
-        if (newNodes % 4 === 0) {
-          newLogs.push(`Exploring depth level ${newDepth}...`);
-        }
-        
-        if (newNodes >= 35 && !winner) {
-          setWinner('DFS');
-          setIsRunning(false);
-          clearInterval(intervalRef.current);
-          return {
-            ...prev,
-            nodes: newNodes,
-            depth: newDepth,
-            logs: [...newLogs, `✓ Found connection to ${target}!`],
-            path: [start, 'History', 'Industrial Revolution', 'Electromagnetic Waves', 'Radio Technology', 'Magnetron', target]
-          };
-        }
-        
-        return {
-          ...prev,
-          nodes: newNodes,
-          depth: newDepth,
-          logs: newLogs.slice(-8)
-        };
-      });
-    }, 400);
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(`start:${start},target:${target}`);
+    } else {
+      alert('WebSocket not connected! Make sure backend is running on localhost:8000');
+      setIsRunning(false);
+    }
   };
 
   const resetArena = () => {
@@ -132,6 +64,8 @@ export default function RabbitHoleArena() {
     setIsRunning(false);
     setBfsData({ logs: [], nodes: 0, depth: 0, model: bfsData.model, path: [] });
     setDfsData({ logs: [], nodes: 0, depth: 0, model: dfsData.model, path: [] });
+    setBfsGraphData({ nodes: [], links: [] });
+    setDfsGraphData({ nodes: [], links: [] });
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
@@ -145,6 +79,125 @@ export default function RabbitHoleArena() {
     setDfsData(prev => ({ ...prev, model }));
   };
 
+  useEffect(() => {
+    const wsUrl = import.meta.env.VITE_WS_URL || 'ws://127.0.0.1:8000/ws';
+    const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
+
+    ws.onmessage = (event) => {
+      let payload;
+      try {
+        payload = JSON.parse(event.data);
+      } catch {
+        return;
+      }
+
+      // Handle finish event (winner)
+      if (payload.type === 'finish') {
+        if (payload.winner && payload.agent_type) {
+          const winnerName = payload.agent_type.toUpperCase();
+          setWinner(winnerName);
+          setIsRunning(false);
+          
+          console.log(`🏆 ${winnerName} won! Stopping all agents.`);
+          
+          // Update the winning agent's final data
+          if (payload.agent_type === 'bfs') {
+            setBfsData(prev => ({
+              ...prev,
+              logs: [...prev.logs, `✓ Found target!`, `🏆 Winner!`],
+              path: payload.final_path || prev.path
+            }));
+          } else {
+            setDfsData(prev => ({
+              ...prev,
+              logs: [...prev.logs, `✓ Found target!`, `🏆 Winner!`],
+              path: payload.final_path || prev.path
+            }));
+          }
+        } else {
+          // Handle the losing agent's final update
+          if (payload.agent_type === 'bfs') {
+            setBfsData(prev => ({
+              ...prev,
+              logs: [...prev.logs, `❌ Race stopped`]
+            }));
+          } else {
+            setDfsData(prev => ({
+              ...prev,
+              logs: [...prev.logs, `❌ Race stopped`]
+            }));
+          }
+        }
+        return;
+      }
+
+      // Handle update event
+      if (payload.type !== 'update' || !payload.node || !payload.path) {
+        return;
+      }
+
+      const nextLog = `Visiting: ${payload.node}`;
+      const agentType = payload.agent_type;
+      
+      // Update the appropriate graph data
+      const updateGraph = agentType === 'bfs' ? setBfsGraphData : setDfsGraphData;
+      
+      updateGraph(prev => {
+        const newNodes = [...prev.nodes];
+        const newLinks = [...prev.links];
+        
+        // Add current node if not exists
+        if (!newNodes.find(n => n.id === payload.node)) {
+          newNodes.push({
+            id: payload.node,
+            isTarget: payload.status === 'success'
+          });
+        }
+        
+        // Add link from parent if exists
+        if (payload.parent && !newLinks.find(l => 
+          l.source === payload.parent && l.target === payload.node
+        )) {
+          newLinks.push({
+            source: payload.parent,
+            target: payload.node
+          });
+        }
+        
+        return { nodes: newNodes, links: newLinks };
+      });
+      
+      if (agentType === 'bfs') {
+        setBfsData(prev => ({
+          ...prev,
+          logs: [...prev.logs, nextLog].slice(-8),
+          nodes: payload.path.length,
+          depth: Math.max(payload.path.length - 1, 0),
+          path: payload.path
+        }));
+      } else {
+        setDfsData(prev => ({
+          ...prev,
+          logs: [...prev.logs, nextLog].slice(-8),
+          nodes: payload.path.length,
+          depth: Math.max(payload.path.length - 1, 0),
+          path: payload.path
+        }));
+      }
+    };
+
+    ws.onclose = () => {
+      if (wsRef.current === ws) {
+        wsRef.current = null;
+      }
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 p-6 font-sans">
       <Header />
@@ -157,6 +210,19 @@ export default function RabbitHoleArena() {
         isRunning={isRunning}
         onStart={startRabbitHole}
       />
+
+      <div className="max-w-7xl mx-auto my-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <GraphVisualization 
+          graphData={bfsGraphData} 
+          title="BFS Search Graph" 
+          color="blue"
+        />
+        <GraphVisualization 
+          graphData={dfsGraphData} 
+          title="DFS Search Graph" 
+          color="purple"
+        />
+      </div>
 
       <main className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
         <AgentCard 
