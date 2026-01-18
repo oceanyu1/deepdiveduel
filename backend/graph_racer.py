@@ -89,10 +89,12 @@ def search_node(state: AgentState):
         return {"status": "failed"} # Queue empty, gave up
 
     # --- CRITICAL: BFS vs DFS Logic happens here ---
-    # Both pop from front, but differ in how they ADD items back:
-    # BFS = FIFO (pop front, add to back) - explores siblings first
-    # DFS = LIFO (pop front, add reversed to front) - explores depth first
-    current_topic, path = queue.pop(0)
+    # BFS = FIFO (Pop from front)
+    # DFS = LIFO (Pop from front... because we ADD to front later)
+    if state["mode"] == "bfs":
+        current_topic, path = queue.pop(0)  # FIFO (front)
+    else:
+        current_topic, path = queue.pop()   # LIFO (back) for DFS
     
     print(f"🕵️ Visiting: {current_topic} (Depth: {len(path)})")
 
@@ -171,7 +173,7 @@ def search_node(state: AgentState):
 
 Current page: {current_topic}
 Target: {state['target']}
-Available Wikipedia links: {json.dumps(links[:80])}
+Available Wikipedia links: {json.dumps(links[:40])}
 
 Strategy: Pick 5 links that create the shortest conceptual bridge to "{state['target']}". 
 
@@ -344,9 +346,8 @@ The links MUST be chosen from the available links list above. Choose the 5 most 
         # Add to BACK (Standard Queue) - explores siblings first
         updated_queue = queue + new_items
     else:
-        # Add to FRONT (Stack behavior for DFS) - explores best path deeply
-        # Best links go to front, so best is explored first and deepest
-        updated_queue = new_items + queue
+        # Add to FRONT (Stack behavior for DFS)
+        updated_queue = queue + new_items
 
     duration_ms = (time.time() - start_time) * 1000
     return {
