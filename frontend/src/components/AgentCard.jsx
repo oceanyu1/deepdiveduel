@@ -18,10 +18,10 @@ export default function AgentCard({ title, color, data, description, onModelChan
             className="bg-slate-700 text-xs text-white p-2 rounded-lg outline-none border border-slate-600 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <option value="openai/gpt-4o">GPT-4o</option>
-            <option value="google/gemini-flash-1.5-8b">Gemini Flash 1.5 8B</option>
-            <option value="deepseek/deepseek-chat">DeepSeek V3</option>
-            <option value="x-ai/grok-beta">Grok Beta</option>
-            <option value="meta-llama/llama-3-70b-instruct">Llama 3 70B</option>
+            <option value="mistralai/mistral-large">Mistral Large</option>
+            <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</option>
+            <option value="mistralai/mistral-7b-instruct">Mistral 7B Instruct</option>
+            <option value="nousresearch/hermes-2-pro-llama-3-8b">Pro Llama 3 8B</option>
           </select>
           <div className="text-right">
             <span className="block text-2xl font-mono font-bold">{data.nodes}</span>

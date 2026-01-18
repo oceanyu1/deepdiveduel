@@ -36,10 +36,10 @@ export default function RabbitHoleArena() {
   const getModelDisplayName = (modelId) => {
     const modelNames = {
       'openai/gpt-4o': 'GPT-4o',
-      'google/gemini-flash-1.5-8b': 'Gemini Flash 1.5 8B',
-      'deepseek/deepseek-chat': 'DeepSeek V3',
-      'x-ai/grok-beta': 'Grok Beta',
-      'meta-llama/llama-3-70b-instruct': 'Llama 3 70B'
+      'mistralai/mistral-large': 'Mistral Large',
+      'anthropic/claude-3.5-sonnet': 'Claude 3.5 Sonnet',
+      'mistralai/mistral-7b-instruct': 'Mistral 7B Instruct',
+      'nousresearch/hermes-2-pro-llama-3-8b': 'Pro Llama 3 8B'
     };
     return modelNames[modelId] || modelId;
   };
